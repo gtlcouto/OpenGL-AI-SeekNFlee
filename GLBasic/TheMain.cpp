@@ -38,6 +38,9 @@ CHRTimer g_SimTimer;
 CGLMeshVBOManager* g_pTheMeshManager;	// Changed to a pointer
 CGameObjectManager* g_pTheScene;		// ADDED
 
+
+bool KeyPressed[256];
+
 int
   CurrentWidth = 800,
   CurrentHeight = 600,
@@ -87,11 +90,18 @@ void IdleFunction(void);
 void CreateCube(void);
 void DestroyCube(void);
 void DrawCube(void);
+void KeyboardDownFunction(unsigned char, int, int);
+void KeyboardUpFunction(unsigned char, int, int);
 
 int main(int argc, char* argv[])
 {
 
   Initialize(argc, argv);
+
+  for (int idxKey = 0; idxKey < 256; idxKey++)
+  {
+	  KeyPressed[idxKey] = false;
+  }
 
   g_SimTimer.Start();
 
@@ -142,12 +152,15 @@ void Initialize(int argc, char* argv[])
 	matModel = glm::mat4(1.0f);				// Set to identity
 	matView = glm::mat4(1.0f);
 	matProjection = glm::mat4(1.0f);
-
+	
+	g_cameraPos = glm::vec3(0.0f, 10.0f, -10.0f);
+	g_cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 	//TranslateMatrix(&ViewMatrix, 0, 0, -2);
-	matView = glm::mat4(1.0f);		// identity matrix
+	matView = glm::mat4(1.0f);		// identity matrix	
 	matView = glm::lookAt(g_cameraPos,	// Camera (aka "Eye")
-			  g_cameraTarget,	// At (aka "target")
-			  glm::vec3(0.0f, 1.0f, 0.0f));	// Up
+						  g_cameraTarget,	// At (aka "target")
+						  glm::vec3(0.0f, 1.0f, 0.0f));	// Up
+	
 
 
 // Note the path: the files are now in a sub folder
@@ -218,13 +231,10 @@ void Initialize(int argc, char* argv[])
 			pPlayer->position.y = 0.0f;
 			pPlayer->position.z = 0.0f;
 
-			//CPhysProps tempProps = pPlayer->GetPhysProps();;
-			//tempProps.velocity.x = 0.5f;		// 1 "unit" per second
-			//tempProps.velocity.y = 7.0f;		// Throw bunny at 10 units per sec straight up
-			//tempProps.accel.y = -9.81f;		// Accel due to gravity in most places on the Earth
-			//pPlayer->SetPhysProps( tempProps );
+			CPhysProps tempProps = pPlayer->GetPhysProps();;
+			pPlayer->SetPhysProps( tempProps );
 
-			pPlayer->colour = glm::vec3(1.0f, 0.0f, 0.0f);
+			pPlayer->colour = glm::vec3(0.0f, 1.0f, 1.0f);
 
 			CMeshInfo tempMeshInfo;
 			::g_pTheMeshManager->GetInfoByMeshName(pPlayer->meshName, tempMeshInfo);
@@ -245,6 +255,8 @@ void Initialize(int argc, char* argv[])
 		if (pEnemy != 0)
 		{
 			pEnemy->position = randomPos[i];
+			CPhysProps tempProps = pEnemy->GetPhysProps();;
+			pEnemy->SetPhysProps( tempProps );
 
 			pEnemy->colour = glm::vec3(1.0f, 0.0f, 0.0f);
 
@@ -334,12 +346,54 @@ void InitWindow(int argc, char* argv[])
     exit(EXIT_FAILURE);
   }
   
+  glutKeyboardFunc(KeyboardDownFunction);
+  glutKeyboardUpFunc(KeyboardUpFunction);
   glutReshapeFunc(ResizeFunction);
   glutDisplayFunc(RenderFunction);
   glutIdleFunc(IdleFunction);
   glutTimerFunc(0, TimerFunction, 0);
   glutCloseFunc(DestroyCube);
 }
+
+void KeyboardUpFunction(unsigned char ch, int x, int y)
+{
+	CPhysProps tempProps = pPlayer->GetPhysProps();
+	KeyPressed[ch] = false;
+	tempProps.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+	pPlayer->SetPhysProps(tempProps);
+}
+
+void KeyboardDownFunction(unsigned char ch, int x, int y)
+{
+	KeyPressed[ch] = true;
+	CPhysProps tempProps = pPlayer->GetPhysProps();
+	float someAmount = 0.8f;
+	switch (ch)
+	{
+	case 'a':
+	{
+		tempProps.velocity.x = someAmount;
+	}
+	break;
+	case 's':
+	{
+		tempProps.velocity.z = -someAmount;
+	}
+	break;
+	case 'd':
+	{
+		tempProps.velocity.x = -someAmount;
+	}
+	break;
+	case 'w':
+	{
+		tempProps.velocity.z = someAmount;
+	}
+	break;
+	}
+	pPlayer->SetPhysProps(tempProps);
+}
+
 
 void ResizeFunction(int Width, int Height)
 {
@@ -385,20 +439,32 @@ void IdleFunction(void)
 	//g_CollisionDetect->Update();
 
 
+
+		
+	//pPlayer->position.z += 0.01f;
+	g_cameraTarget = pPlayer->position;
+
+	matView = glm::lookAt(g_cameraPos,	// Camera (aka "Eye")
+		g_cameraTarget,	// At (aka "target")
+		glm::vec3(0.0f, 1.0f, 0.0f));	// Up
+
+
+
+
+
+
+
+
 	g_SimTimer.Stop();   // (optional)
 	float deltaTime = g_SimTimer.GetElapsedSeconds();
-	//#include <iostream>
-	//std::cout << deltaTime << " seconds" << std::endl;
 	g_SimTimer.Start();			// Restart the timer counter (we want this)
 
 	// Update our objects one time step
-	//std::vector< CGameObject* > vecObjectsToDraw;
-	//::g_pTheScene->GetRenderedObjects( vecObjectsToDraw );
 	std::vector< IPhysObject* > vecPhysicsObjects;
 	::g_pTheScene->GetPhysicsObjects( vecPhysicsObjects );
 
 	//for ( int index = 0; index != ::g_p_vecGameObjects.size(); index++ )
-	for ( int index = 0; index != vecPhysicsObjects.size(); index++ )
+	for ( int index = 1; index != (vecPhysicsObjects.size() - 1); index++ )
 	{
 		//CGameObject* pCurObject = ::g_p_vecGameObjects[index];
 		IPhysObject* pCurObject = vecPhysicsObjects[index];
@@ -439,17 +505,17 @@ void IdleFunction(void)
 		tempProps.position.y += deltaDistance.y;
 		tempProps.position.z += deltaDistance.z;
 
-		// What if the bunny hits the "ground" (-4.0f is where the "ground" is)
-		//if ( pCurObject->position.y <= -4.0f )
+		//// What if the bunny hits the "ground" (-4.0f is where the "ground" is)
+		////if ( pCurObject->position.y <= -4.0f )
+		////{
+		////	pCurObject->velocity.y = -( pCurObject->velocity.y * 0.90f );
+		////	//pCurObject->accel.y = 0.0f;
+		////}
+		//if ( tempProps.position.y <= -4.0f )
 		//{
-		//	pCurObject->velocity.y = -( pCurObject->velocity.y * 0.90f );
+		//	tempProps.velocity.y = -( tempProps.velocity.y * 0.90f );
 		//	//pCurObject->accel.y = 0.0f;
 		//}
-		if ( tempProps.position.y <= -4.0f )
-		{
-			tempProps.velocity.y = -( tempProps.velocity.y * 0.90f );
-			//pCurObject->accel.y = 0.0f;
-		}
 
 		// Now pass these updated physical properties back into the object
 		pCurObject->SetPhysProps( tempProps );
