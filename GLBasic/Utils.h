@@ -9,6 +9,10 @@
 #include <GL/freeglut.h>
 #include <vector>
 #include <glm\glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/norm.hpp>
 
 //#include "d:\dev\include\GL\freeglut.h"
 
@@ -31,7 +35,7 @@ static const double PI = 3.14159265358979323846;
 float Cotangent(float angle);
 float DegreesToRadians(float degrees);
 float RadiansToDegrees(float radians);
-
+glm::quat RotationBetweenVectors(glm::vec3 start, glm::vec3 dest);
 //Matrix MultiplyMatrices(const Matrix* m1, const Matrix* m2);
 //void RotateAboutX(Matrix* m, float angle);
 //void RotateAboutY(Matrix* m, float angle);
